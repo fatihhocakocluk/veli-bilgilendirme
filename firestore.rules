@@ -1,0 +1,48 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+    function ownUserDoc(uid) {
+      return signedIn() && request.auth.uid == uid;
+    }
+    function isTeacher() {
+      return signedIn()
+        && exists(/databases/$(database)/documents/users/$(request.auth.uid))
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == "teacher";
+    }
+    function isParentOf(studentId) {
+      return signedIn()
+        && exists(/databases/$(database)/documents/students/$(studentId))
+        && get(/databases/$(database)/documents/students/$(studentId)).data.parentEmail == request.auth.token.email;
+    }
+
+    match /users/{uid} {
+      allow read: if ownUserDoc(uid) || isTeacher();
+      // A user may create only a parent profile for themselves.
+      allow create: if ownUserDoc(uid)
+        && request.resource.data.keys().hasOnly(["role", "email", "createdAt"])
+        && request.resource.data.role == "parent"
+        && request.resource.data.email == request.auth.token.email;
+      // Role changes must be performed in Firebase Console by an administrator.
+      allow update, delete: if isTeacher();
+    }
+
+    match /students/{studentId} {
+      allow read: if isTeacher()
+        || (signedIn() && resource.data.parentEmail == request.auth.token.email);
+      allow create, update, delete: if isTeacher();
+
+      match /entries/{entryId} {
+        allow read: if isTeacher() || isParentOf(studentId);
+        allow create, update, delete: if isTeacher();
+      }
+    }
+
+    // Deny everything else unless explicitly allowed above.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

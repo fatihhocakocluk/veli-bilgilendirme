@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#1769e0">
+  <title>Fatih Hoca | Öğrenci Takip</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="firebase-config.js"></script>
+  <script type="module" src="app.js"></script>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand-mark">FH</div>
+    <div class="brand-copy"><strong>Fatih Hoca</strong><span>Öğrenci Takip Sistemi</span></div>
+    <div class="topbar-right"><span id="userBadge" class="user-badge hidden"></span><button id="logoutBtn" class="btn btn-outline hidden">Çıkış yap</button></div>
+  </header>
+
+  <main class="container">
+    <section id="setupWarning" class="notice hidden">
+      <strong>Firebase ayarı eksik.</strong>
+      <p><code>firebase-config.js</code> dosyasına Firebase projenin web ayarlarını ekle ve GitHub'a yükle.</p>
+    </section>
+
+    <section id="welcomeView" class="hero">
+      <div class="hero-copy">
+        <p class="eyebrow">DÜZENLİ TAKİP · GÜÇLÜ İLETİŞİM</p>
+        <h1>Her öğrencinin<br><span>gelişimi görünür.</span></h1>
+        <p class="hero-desc">Ders konularını, deneme sınavlarını, kitapları ve öğretmen değerlendirmelerini tek bir yerde takip edin.</p>
+        <div class="hero-pills"><span>● Öğrenci gelişimi</span><span>● Veli bilgilendirme</span><span>● PDF raporu</span></div>
+      </div>
+      <div class="login-card">
+        <div class="card-icon">↗</div>
+        <h2>Hesabına giriş yap</h2>
+        <p class="muted">Öğretmen e-posta ve şifresiyle, veliler Google hesabıyla giriş yapabilir.</p>
+        <div class="tabs">
+          <button class="tab active" data-tab="teacher">Öğretmen</button>
+          <button class="tab" data-tab="parent">Veli</button>
+        </div>
+        <form id="teacherLoginForm" class="login-form">
+          <label for="teacherEmail">Öğretmen e-posta adresi</label>
+          <input id="teacherEmail" type="email" autocomplete="username" placeholder="ornek@posta.com" required>
+          <label for="teacherPassword">Şifre</label>
+          <input id="teacherPassword" type="password" autocomplete="current-password" placeholder="Şifren" required>
+          <button class="btn btn-primary btn-full" type="submit">Öğretmen girişi <span>→</span></button>
+        </form>
+        <div id="parentLoginPanel" class="login-form hidden">
+          <button id="googleLoginBtn" class="btn btn-google btn-full" type="button"><span class="google-g">G</span> Google ile giriş yap</button>
+          <p class="tiny">Veli hesabının e-posta adresi öğretmenin öğrenci kaydına eklenmiş olmalıdır.</p>
+        </div>
+        <p id="loginMessage" class="message" role="status"></p>
+      </div>
+    </section>
+
+    <section id="parentLookupView" class="panel hidden">
+      <div class="section-heading"><div><p class="eyebrow">VELİ PANELİ</p><h2>Öğrenci kaydını bul</h2></div></div>
+      <p class="muted">Öğretmenin kaydına eklediği e-posta adresiyle giriş yaptın. Çocuğunun adını yazarak raporunu görüntüleyebilirsin.</p>
+      <form id="parentLookupForm" class="lookup-row"><input id="childNameInput" placeholder="Öğrencinin adı veya soyadı" required><button class="btn btn-primary" type="submit">Kaydı bul</button></form>
+      <p id="parentMessage" class="message" role="status"></p>
+      <div id="parentResults" class="student-grid"></div>
+    </section>
+
+    <section id="teacherView" class="hidden">
+      <div class="dashboard-heading">
+        <div><p class="eyebrow">ÖĞRETMEN PANELİ</p><h1>Öğrenci yönetimi</h1><p class="muted">Kayıtları oluştur, gelişimi izle ve veli raporu hazırla.</p></div>
+        <button id="newStudentBtn" class="btn btn-primary">＋ Yeni öğrenci</button>
+      </div>
+      <div class="stat-grid">
+        <div class="stat-card"><span class="stat-label">Toplam öğrenci</span><strong id="totalStudents">0</strong><span class="stat-foot">Kayıtlı öğrenci</span></div>
+        <div class="stat-card"><span class="stat-label">Lise grubu</span><strong id="highSchoolCount">0</strong><span class="stat-foot">9–12. sınıf ve mezun</span></div>
+        <div class="stat-card"><span class="stat-label">Son güncelleme</span><strong id="lastUpdate">—</strong><span class="stat-foot">Kayıtlar yenilendikçe</span></div>
+      </div>
+      <div class="panel">
+        <div class="section-heading"><div><h2>Öğrenciler</h2><p class="muted">Bir öğrenciyi açarak ders ve gelişim kayıtlarını yönet.</p></div><input id="studentSearch" class="search-input" placeholder="İsim, soyisim veya sınıf ara"></div>
+        <div id="studentList" class="student-grid"></div>
+        <div id="emptyStudents" class="empty-state"><div class="empty-icon">＋</div><strong>Henüz öğrenci yok</strong><p>İlk öğrenci kaydını oluşturmak için “Yeni öğrenci” butonuna bas.</p></div>
+      </div>
+    </section>
+
+    <section id="studentEditorView" class="hidden">
+      <div class="back-row"><button id="backToStudentsBtn" class="back-link">← Öğrencilere dön</button><span class="muted">Öğrenci dosyası</span></div>
+      <div class="student-profile panel">
+        <div class="avatar" id="profileAvatar">Ö</div>
+        <div class="profile-main"><p class="eyebrow">ÖĞRENCİ DOSYASI</p><h1 id="profileName">Öğrenci</h1><p id="profileMeta" class="muted"></p></div>
+        <button id="downloadReportBtn" class="btn btn-primary">PDF raporu yazdır / kaydet</button>
+      </div>
+      <div class="tabs content-tabs">
+        <button class="tab active" data-content-tab="records">Gelişim kayıtları</button>
+        <button class="tab" data-content-tab="details">Öğrenci bilgileri</button>
+      </div>
+      <div id="recordsTab">
+        <div class="panel">
+          <div class="section-heading"><div><h2>Yeni gelişim kaydı</h2><p class="muted">Konu, sınav, kitap veya öğretmen yorumu ekle.</p></div></div>
+          <form id="entryForm" class="form-grid">
+            <div><label for="entryType">Kayıt türü</label><select id="entryType" required><option value="Ders / Konu">Ders / Konu</option><option value="TYT">TYT</option><option value="AYT">AYT</option><option value="Deneme sınavı">Deneme sınavı</option><option value="Okunan kitap">Okunan kitap</option><option value="Öğretmen yorumu">Öğretmen yorumu</option></select></div>
+            <div><label for="entrySubject">Ders / alan</label><input id="entrySubject" placeholder="Örn. Biyoloji, Matematik"></div>
+            <div><label for="entryTopic">Konu / kayıt başlığı</label><input id="entryTopic" placeholder="Örn. Hücre bölünmeleri" required></div>
+            <div><label for="entryDate">Tarih</label><input id="entryDate" type="date" required></div>
+            <div><label for="entryScore">Net / puan (isteğe bağlı)</label><input id="entryScore" placeholder="Örn. 72 net"></div>
+            <div class="full-width"><label for="entryNote">Açıklama / öğretmen yorumu</label><textarea id="entryNote" rows="3" placeholder="İlerleme, eksikler, öneriler..."></textarea></div>
+            <div class="full-width form-actions"><button class="btn btn-primary" type="submit">Kaydı ekle</button><span id="entryMessage" class="message"></span></div>
+          </form>
+        </div>
+        <div class="panel">
+          <div class="section-heading"><div><h2>Gelişim geçmişi</h2><p class="muted">Bu öğrenciye ait tüm kayıtlar.</p></div><select id="entryFilter" class="filter-select"><option value="all">Tüm kayıtlar</option><option>Ders / Konu</option><option>TYT</option><option>AYT</option><option>Deneme sınavı</option><option>Okunan kitap</option><option>Öğretmen yorumu</option></select></div>
+          <div id="entryList" class="timeline"></div>
+          <div id="emptyEntries" class="empty-state"><div class="empty-icon">✦</div><strong>Henüz gelişim kaydı yok</strong><p>Yukarıdaki formdan ilk kaydı ekleyebilirsin.</p></div>
+        </div>
+      </div>
+      <div id="detailsTab" class="panel hidden">
+        <div class="section-heading"><div><h2>Öğrenci bilgilerini düzenle</h2><p class="muted">Veli erişimi için doğru e-posta adresini yaz.</p></div></div>
+        <form id="studentEditForm" class="form-grid">
+          <div><label for="editFirstName">Ad</label><input id="editFirstName" required></div>
+          <div><label for="editLastName">Soyad</label><input id="editLastName" required></div>
+          <div><label for="editGrade">Sınıf</label><select id="editGrade" required><option>5. sınıf</option><option>6. sınıf</option><option>7. sınıf</option><option>8. sınıf</option><option>9. sınıf</option><option>10. sınıf</option><option>11. sınıf</option><option>12. sınıf</option><option>Mezun</option></select></div>
+          <div><label for="editParentEmail">Veli Google e-postası</label><input id="editParentEmail" type="email" placeholder="veli@gmail.com" required></div>
+          <div class="full-width"><label for="editGeneralNote">Genel değerlendirme</label><textarea id="editGeneralNote" rows="4" placeholder="Öğrencinin genel durumu, hedefleri ve çalışma önerileri..."></textarea></div>
+          <div class="full-width form-actions"><button class="btn btn-primary" type="submit">Bilgileri kaydet</button><button id="deleteStudentBtn" class="btn btn-danger" type="button">Öğrenciyi sil</button><span id="editMessage" class="message"></span></div>
+        </form>
+      </div>
+    </section>
+
+    <section id="reportView" class="hidden"></section>
+  </main>
+  <footer><span>Fatih Hoca · Öğrenci Takip Sistemi</span><span>Güvenli erişim · Düzenli gelişim</span></footer>
+</body>
+</html>
